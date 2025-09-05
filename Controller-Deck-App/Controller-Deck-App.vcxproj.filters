@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Api">
+      <UniqueIdentifier>{3FD6870B-ABDF-877C-345B-9E7CA063937C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{169C8510-82B0-ADC1-4B32-5121B705AAF2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Api\ApiServer.hpp">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\Config.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\ConfigLoader.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\MainApp.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\MappingExecutor.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\Utils.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Api\ApiServer.cpp">
+      <Filter>Api</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\utils\ConfigLoader.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\utils\MainApp.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\utils\MappingExecutor.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

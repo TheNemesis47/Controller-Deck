@@ -1,14 +1,39 @@
-# Directories
+﻿# VS / build / binaries
 .vs/
+.vscode/
 Binaries/
-
-# Files
-*.vcxproj
-*.vcxproj.user
-*.vcxproj.filters
-*.sln
+**/Intermediates/
+bin/
+build/
+out/
+Output/
+*.obj
+*.pch
+*.pdb
+*.ilk
 *.log
-Makefile
+*.tlog
+*.cache
 
-# Exclude
-!Vendor/Binaries
+# Progetti VS
+*.vcxproj.user
+*.user
+*.suo
+
+# vcpkg (solo se dentro al repo)
+vcpkg/buildtrees/
+vcpkg/packages/
+vcpkg/downloads/
+vcpkg/installed/
+
+# cartelle locali varie
+packages/
+
+# Installer output
+*.msi
+*.exe
+*.zip
+
+# OS junk
+*.DS_Store
+Thumbs.db

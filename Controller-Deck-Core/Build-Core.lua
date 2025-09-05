@@ -1,23 +1,19 @@
-project "App"
-   kind "ConsoleApp"
+project "Controller-Deck-Core"
+   kind "StaticLib"
    language "C++"
    cppdialect "C++20"
+   characterset "Unicode"
    targetdir "Binaries/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "Source/**.h", "Source/**.cpp" }
-
+   files { 
+       "Source/**.h", 
+       "Source/**.cpp",
+       "Source/**.hpp"
+   }
    includedirs
    {
-      "Source",
-
-	  -- Include Core
-	  "../Core/Source"
-   }
-
-   links
-   {
-      "Core"
+      "Source"
    }
 
    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")
@@ -25,7 +21,16 @@ project "App"
 
    filter "system:windows"
        systemversion "latest"
-       defines { "WINDOWS" }
+       defines {
+           "_WIN32_WINNT=0X0A00",
+           "WIN32_LEAN_AND_MEAN",
+           "NOMINMAX",
+           "ASIO_STANDALONE"
+       }
+       buildoptions { "/utf-8"} -- richiesto da ftm per i file di risorse
+       -- librerie di sistema per asio + SetupDi* (enumerazione COM)
+        links { "setupapi", "ws2_32", "mswsock", "advapi32" }
+    filter{}
 
    filter "configurations:Debug"
        defines { "DEBUG" }

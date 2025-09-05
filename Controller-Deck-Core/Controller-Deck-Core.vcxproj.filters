@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Actions">
+      <UniqueIdentifier>{B655A67E-2235-251A-2B4D-B0F097AB8B7B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Audio">
+      <UniqueIdentifier>{9718D90C-032D-01BE-CCAE-A41D3882FDEE}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Serial">
+      <UniqueIdentifier>{A52ADFD0-91CC-09A7-7A87-1DFB66C890F7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Core\Actions\Hotkey.hpp">
+      <Filter>Actions</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Actions\TextInput.hpp">
+      <Filter>Actions</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Audio\AudioController.hpp">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Audio\AudioSessionController.hpp">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Core.h" />
+    <ClInclude Include="Source\Core\DeckState.hpp" />
+    <ClInclude Include="Source\Core\MessageParser.hpp" />
+    <ClInclude Include="Source\Core\Serial\Serial.hpp">
+      <Filter>Serial</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Serial\SerialController.hpp">
+      <Filter>Serial</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Serial\SerialPortEnumerator.hpp">
+      <Filter>Serial</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Core\Actions\Hotkey.cpp">
+      <Filter>Actions</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Actions\TextInput.cpp">
+      <Filter>Actions</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Audio\AudioController.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Audio\AudioSessionController.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Core.cpp" />
+    <ClCompile Include="Source\Core\MessageParser.cpp" />
+    <ClCompile Include="Source\Core\Serial\Serial.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Serial\SerialController.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Serial\SerialPortEnumerator.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -22,3 +22,22 @@ Note that no macOS setup script is currently provided; you can duplicate the Lin
 ## License
 - UNLICENSE for this repository (see `UNLICENSE.txt` for more details)
 - Premake is licensed under BSD 3-Clause (see included LICENSE.txt file for more details)
+
+
+
+
+## Immettere Librerie
+- clonare vcpkg
+- aprire powershell
+- nella cartella vcpkg eseguire .\bootstrap-vcpkg.bat
+- nella cartella vcpkg eseguire .\vcpkg integrate install
+- nella cartella vcpkg eseguire .\vcpkg search <nome libreria>
+- nella cartella vcpkg eseguire .\vcpkg install <nome libreria>
+- nella cartella vcpkg eseguire .\vcpkg list per vedere le librerie installate
+- nella cartella vcpkg eseguire .\vcpkg remove <nome libreria> per rimuovere una libreria
+- nella cartella vcpkg eseguire .\vcpkg update per aggiornare le librerie
+- nella cartella vcpkg eseguire .\vcpkg upgrade per aggiornare le librerie installate
+- nella cartella vcpkg eseguire .\vcpkg export <nome libreria> --zip per esportare una libreria in un file zip
+- nella cartella vcpkg eseguire .\vcpkg integrate project per integrare vcpkg con il progetto corrente
+- in visual studio andare in strumenti -> gestione pacchetti nuget -> consola di gestione pacchetti
+- nella consola di gestione pacchetti eseguire il comando che vcpkg ha stampato dopo l'integrazione del progetto
