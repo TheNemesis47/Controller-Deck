@@ -123,7 +123,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>_WIN32_WINNT=0X0A00;WIN32_LEAN_AND_MEAN;NOMINMAX;ASIO_STANDALONE;DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Source;..\Controller-Deck-Core\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Source;..\Controller-Deck-Core\Source;..\ThirdParty\cpp-httplib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -145,18 +145,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Api\ApiServer.hpp" />
+    <ClInclude Include="Source\Api\ApiWiring.hpp" />
+    <ClInclude Include="Source\utils\AudioDiscovery.hpp" />
     <ClInclude Include="Source\utils\Config.hpp" />
     <ClInclude Include="Source\utils\ConfigLoader.hpp" />
     <ClInclude Include="Source\utils\MainApp.hpp" />
     <ClInclude Include="Source\utils\MappingExecutor.hpp" />
+    <ClInclude Include="Source\utils\ProcessUtils.hpp" />
     <ClInclude Include="Source\utils\Utils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Api\ApiServer.cpp" />
+    <ClCompile Include="Source\Api\ApiWiring.cpp" />
     <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\utils\AudioDiscovery.cpp" />
     <ClCompile Include="Source\utils\ConfigLoader.cpp" />
     <ClCompile Include="Source\utils\MainApp.cpp" />
     <ClCompile Include="Source\utils\MappingExecutor.cpp" />
+    <ClCompile Include="Source\utils\ProcessUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Controller-Deck-Core\Controller-Deck-Core.vcxproj">

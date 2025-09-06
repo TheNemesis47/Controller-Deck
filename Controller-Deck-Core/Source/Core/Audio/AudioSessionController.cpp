@@ -1,4 +1,5 @@
 ﻿#include "Core/Audio/AudioSessionController.hpp"
+#include "../../Controller-Deck-App/Source/utils/ProcessUtils.hpp"
 
 #include <windows.h>
 #include <mmdeviceapi.h>
@@ -51,24 +52,10 @@ void AudioSessionController::shutdown() {
     if (m_comInit) { CoUninitialize(); m_comInit = false; }
 }
 
-// Ottiene exeLower da PID (usa QueryFullProcessImageNameA, no psapi)
-static bool pidToExeLower(DWORD pid, std::string& exeLower) {
-    if (pid == 0) return false; // "System Sounds"
-    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-    if (!h) return false;
-    char buf[1024]; DWORD sz = (DWORD)sizeof(buf);
-    bool ok = false;
-    if (QueryFullProcessImageNameA(h, 0, buf, &sz)) {
-        exeLower = AudioSessionController::basenameLower(std::string(buf, sz));
-        ok = true;
-    }
-    CloseHandle(h);
-    return ok;
-}
 
 bool AudioSessionController::matchProcessName(unsigned pid, const std::string& wantedExeLower, std::string& outExeLower) {
     std::string exeLower;
-    if (!pidToExeLower((DWORD)pid, exeLower)) return false;
+    if (!ProcUtils::PidToExeLower((DWORD)pid, exeLower)) return false;
     outExeLower = exeLower;
     return exeLower == wantedExeLower;
 }
@@ -124,7 +111,7 @@ bool AudioSessionController::setAppVolume(const std::string& processExeLower, fl
     bool applied = false;
     withSessions([&](void* pCtrl2, void* pVol, unsigned pid, const std::string&) {
         std::string exeLower;
-        if (!pidToExeLower(pid, exeLower)) return false;
+        if (!ProcUtils::PidToExeLower(pid, exeLower)) return false;
         if (exeLower != wanted) return false;
         auto* vol = (ISimpleAudioVolume*)pVol;
         if (SUCCEEDED(vol->SetMasterVolume(v01, nullptr))) applied = true;
@@ -140,7 +127,7 @@ bool AudioSessionController::getAppVolume(const std::string& processExeLower, fl
 
     withSessions([&](void* pCtrl2, void* pVol, unsigned pid, const std::string&) {
         std::string exeLower;
-        if (!pidToExeLower(pid, exeLower)) return false;
+        if (!ProcUtils::PidToExeLower(pid, exeLower)) return false;
         if (exeLower != wanted) return false;
         float v = 0.f;
         if (SUCCEEDED(((ISimpleAudioVolume*)pVol)->GetMasterVolume(&v))) {
@@ -158,7 +145,7 @@ bool AudioSessionController::setAppMute(const std::string& processExeLower, bool
 
     withSessions([&](void* pCtrl2, void* pVol, unsigned pid, const std::string&) {
         std::string exeLower;
-        if (!pidToExeLower(pid, exeLower)) return false;
+        if (!ProcUtils::PidToExeLower(pid, exeLower)) return false;
         if (exeLower != wanted) return false;
         if (SUCCEEDED(((ISimpleAudioVolume*)pVol)->SetMute(mute, nullptr))) applied = true;
         return applied;
@@ -173,7 +160,7 @@ bool AudioSessionController::toggleAppMute(const std::string& processExeLower) {
 
     withSessions([&](void* pCtrl2, void* pVol, unsigned pid, const std::string&) {
         std::string exeLower;
-        if (!pidToExeLower(pid, exeLower)) return false;
+        if (!ProcUtils::PidToExeLower(pid, exeLower)) return false;
         if (exeLower != wanted) return false;
         BOOL isMuted = FALSE;
         auto* vol = (ISimpleAudioVolume*)pVol;

@@ -14,3 +14,4 @@ group "Core"
 group ""
 
 include "Controller-Deck-App/Build-App.lua"
+includedirs {"ThirdParty/cpp-httplib"}

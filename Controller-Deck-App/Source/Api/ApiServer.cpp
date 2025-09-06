@@ -147,41 +147,43 @@ void ApiServer::installRoutes() {
         setCORSHeaders(res);
         });
 
-    // POST /actions/button/{i}
-    m_srv->Post(R"(/actions/button/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
-        if (!m_cbs.pressButton) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
-        int idx = std::stoi(req.matches[1]);
+    // POST /serial/close
+    m_srv->Post("/serial/close", [this](const httplib::Request&, httplib::Response& res) {
+        if (!m_cbs.closeSerialPort) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+
         std::string err;
-        if (!m_cbs.pressButton(idx, err)) { fail(res, 400, err.empty() ? "action_failed" : err); }
-        else { ok(res, Json{ {"pressed", idx} }); }
+        try {
+            if (m_cbs.closeSerialPort(err)) {
+                ok(res, Json{ {"closed", true}, {"message", "Connessione seriale chiusa; in attesa di nuova selezione"} });
+            }
+            else {
+                // Convenzione: err == "not_connected" -> noop/già chiuso
+                if (err == "not_connected") {
+                    fail(res, 409, "not_connected");
+                }
+                else {
+                    fail(res, 400, err.empty() ? "close_failed" : err);
+                }
+            }
+        }
+        catch (const std::exception& ex) {
+            fail(res, 500, ex.what());
+        }
         setCORSHeaders(res);
         });
 
-    // POST /actions/slider/{i}  body: {"value": 0..1023}  (accettiamo anche 0..1 float: viene scalato)
-    m_srv->Post(R"(/actions/slider/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
-        if (!m_cbs.applySliderRaw) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
-        try {
-            int idx = std::stoi(req.matches[1]);
-            auto j = Json::parse(req.body);
-            std::string err;
-            int raw = -1;
-            if (j.contains("value")) {
-                if (j["value"].is_number_integer()) {
-                    raw = j["value"].get<int>(); // 0..1023
-                }
-                else if (j["value"].is_number_float()) {
-                    double v = j["value"].get<double>(); // 0..1
-                    if (v < 0.0) v = 0.0; if (v > 1.0) v = 1.0;
-                    raw = static_cast<int>(v * 1023.0 + 0.5);
-                }
-            }
-            if (raw < 0 || raw > 1023) { fail(res, 400, "value_out_of_range"); setCORSHeaders(res); return; }
-            if (!m_cbs.applySliderRaw(idx, raw, err)) { fail(res, 400, err.empty() ? "action_failed" : err); }
-            else { ok(res, Json{ {"slider", idx}, {"value_raw", raw} }); }
-        }
-        catch (...) {
-            fail(res, 400, "bad_json_or_index");
-        }
+	// GET /audio/devices
+    m_srv->Get("/audio/devices", [this](const httplib::Request&, httplib::Response& res) {
+        if (!m_cbs.getAudioDevicesJson) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+        ok(res, m_cbs.getAudioDevicesJson());
         setCORSHeaders(res);
         });
+
+    // GET /audio/processes
+    m_srv->Get("/audio/processes", [this](const httplib::Request&, httplib::Response& res) {
+        if (!m_cbs.getAudioProcessesJson) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+        ok(res, m_cbs.getAudioProcessesJson());
+        setCORSHeaders(res);
+        });
+
 }

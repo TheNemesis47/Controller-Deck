@@ -28,9 +28,12 @@ public:
         std::function<std::vector<std::string>()> listSerialPorts;
         std::function<bool(const std::string& port, unsigned baud, std::string& err)> selectSerialPort;
 
-        // Azioni (test/FE)
-        std::function<bool(int idx, std::string& err)> pressButton;
-        std::function<bool(int idx, int rawValue, std::string& err)> applySliderRaw; // raw 0..1023
+        // chiusura seriale
+        std::function<bool(std::string& err)> closeSerialPort;
+
+        // processi/dispositivi aufio info
+        std::function<nlohmann::json()> getAudioDevicesJson;
+		std::function<nlohmann::json()> getAudioProcessesJson;
     };
 
     ApiServer(std::string host, int port, Callbacks cbs, bool enableCORS = false);

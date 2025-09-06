@@ -44,8 +44,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "autostart"; Description: "Avvia automaticamente all'accesso"; Flags: checkedonce
 
 [Files]
-Source: "C:\Users\Samuel\Documents\Controller-Deck-1\Binaries\windows-x86_64\Debug\Controller-Deck-App\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Samuel\Documents\Controller-Deck-1\Binaries\windows-x86_64\Debug\Controller-Deck-App\fmtd.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Samuel\Documents\Controller-Deck-1\Binaries\windows-x86_64\Release\Controller-Deck-App\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Samuel\Documents\Controller-Deck-1\Binaries\windows-x86_64\Release\Controller-Deck-App\fmt.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Samuel\Documents\Controller-Deck-1\Binaries\windows-x86_64\Release\Controller-Deck-Core\Controller-Deck-Core.lib"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\Samuel\Documents\Controller-Deck-1\Controller-Deck-App\Source\config.json"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

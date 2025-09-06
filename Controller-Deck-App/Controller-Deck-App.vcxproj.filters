@@ -12,6 +12,12 @@
     <ClInclude Include="Source\Api\ApiServer.hpp">
       <Filter>Api</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Api\ApiWiring.hpp">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\AudioDiscovery.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
     <ClInclude Include="Source\utils\Config.hpp">
       <Filter>utils</Filter>
     </ClInclude>
@@ -24,6 +30,9 @@
     <ClInclude Include="Source\utils\MappingExecutor.hpp">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="Source\utils\ProcessUtils.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
     <ClInclude Include="Source\utils\Utils.hpp">
       <Filter>utils</Filter>
     </ClInclude>
@@ -32,7 +41,13 @@
     <ClCompile Include="Source\Api\ApiServer.cpp">
       <Filter>Api</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Api\ApiWiring.cpp">
+      <Filter>Api</Filter>
+    </ClCompile>
     <ClCompile Include="Source\main.cpp" />
+    <ClCompile Include="Source\utils\AudioDiscovery.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
     <ClCompile Include="Source\utils\ConfigLoader.cpp">
       <Filter>utils</Filter>
     </ClCompile>
@@ -40,6 +55,9 @@
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="Source\utils\MappingExecutor.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\utils\ProcessUtils.cpp">
       <Filter>utils</Filter>
     </ClCompile>
   </ItemGroup>
