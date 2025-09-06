@@ -112,12 +112,68 @@ void ApiServer::installRoutes() {
         setCORSHeaders(res);
         });
 
-    // GET /state
-    m_srv->Get("/state", [this](const httplib::Request&, httplib::Response& res) {
-        if (!m_cbs.getStateJson) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
-        ok(res, m_cbs.getStateJson());
+    // GET /state  (supporta ?verbose=1)
+    m_srv->Get("/state", [this](const httplib::Request& req, httplib::Response& res) {
+        try {
+            const bool verbose = (req.has_param("verbose") && req.get_param_value("verbose") == "1");
+            nlohmann::json out;
+            if (verbose && m_cbs.getStateJsonVerbose) out = m_cbs.getStateJsonVerbose();
+            else if (m_cbs.getStateJson)             out = m_cbs.getStateJson();
+            else { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+
+            ok(res, out);
+        } catch (const std::exception& e) {
+            fail(res, 500, e.what());
+        }
         setCORSHeaders(res);
-        });
+    });
+
+    // GET /layout
+    m_srv->Get("/layout", [this](const httplib::Request&, httplib::Response& res) {
+        if (!m_cbs.getLayoutJson) { fail(res, 404, "not_supported"); setCORSHeaders(res); return; }
+        try {
+            ok(res, m_cbs.getLayoutJson());
+        } catch (const std::exception& e) {
+            fail(res, 500, e.what());
+        }
+        setCORSHeaders(res);
+    });
+
+    // SSE: GET /events/state
+    m_srv->Get("/events/state", [this](const httplib::Request&, httplib::Response& res) {
+        if (!m_cbs.popNextStateEvent) { fail(res, 404, "not_supported"); setCORSHeaders(res); return; }
+
+        res.set_header("Content-Type", "text/event-stream");
+        res.set_header("Cache-Control", "no-cache");
+        res.set_header("Connection", "keep-alive");
+        if (m_cors) res.set_header("Access-Control-Allow-Origin", "*"); // coerente con CORS glob.
+
+        res.set_chunked_content_provider("text/event-stream",
+            // on data
+            [this](size_t, httplib::DataSink& sink) {
+                sink.write(": connected\n\n");
+                if (m_cbs.getStateJsonVerbose) {
+                    auto snap = m_cbs.getStateJsonVerbose();
+                    std::string line = "event: snapshot\ndata: " + snap.dump() + "\n\n";
+                    sink.write(line.c_str(), line.size());
+                }
+                while (sink.is_writable()) {
+                    nlohmann::json ev;
+                    const bool ok = m_cbs.popNextStateEvent(ev, /*timeoutMs*/1000);
+                    if (ok) {
+                        std::string line = "event: stateChanged\ndata: " + ev.dump() + "\n\n";
+                        if (!sink.write(line.c_str(), line.size())) break;
+                    } else {
+                        sink.write(": heartbeat\n\n"); // keep-alive
+                    }
+                }
+                sink.done();
+                return true;
+            },
+            // on done
+            [](bool) {}
+        );
+    });
 
     // GET /serial/ports
     m_srv->Get("/serial/ports", [this](const httplib::Request&, httplib::Response& res) {

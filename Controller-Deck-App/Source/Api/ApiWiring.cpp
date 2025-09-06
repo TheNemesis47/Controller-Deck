@@ -10,30 +10,26 @@ ApiServer::Callbacks ApiWiring::MakeCallbacks(MainApp& app) {
     cbs.getConfigJson = [&app]() { return app.getConfigJson(); };
     cbs.validateConfigJson = [&app](const nlohmann::json& j, std::string& err) { return app.validateConfigJson(j, err); };
     cbs.setConfigJsonStrict = [&app](const nlohmann::json& j, std::string& err) { return app.setConfigJsonStrict(j, err); };
-
-    // 👇 QUI: niente ListSerialPorts “free”, chiama il wrapper dell’app
     cbs.listSerialPorts = [&app]() { return app.listSerialPorts(); };
-
     cbs.selectSerialPort = [&app](const std::string& port, unsigned baud, std::string& err) {
         return app.selectSerialPort(port, baud, err);
         };
     cbs.closeSerialPort = [&app](std::string& err) { return app.closeSerialPort(err); };
-
     cbs.getAudioDevicesJson = []() {
         return AudioDiscovery::EnumerateDevicesJson();
         };
-
-    // 👇 QUI: cattura app per passare l’euristica fullscreen
     cbs.getAudioProcessesJson = [&app]() {
         return AudioDiscovery::EnumerateProcessesJson(
             [&app](DWORD pid) { return app.isProcessFullscreen(pid); }
         );
         };
-
-    // se non lo imposti altrove
     cbs.getVersionJson = []() {
         return nlohmann::json{ {"app","Controller-Deck"}, {"api","1.0.0"}, {"build","dev"} };
         };
-
+    cbs.getLayoutJson = [&app]() { return app.getLayoutJson(); };
+    cbs.getStateJsonVerbose = [&app]() { return app.getStateJson(/*verbose*/true); };
+    cbs.popNextStateEvent = [&app](nlohmann::json& out, int timeoutMs) {
+        return app.popNextStateEventBlocking(out, std::chrono::milliseconds(timeoutMs));
+    };
     return cbs;
 }

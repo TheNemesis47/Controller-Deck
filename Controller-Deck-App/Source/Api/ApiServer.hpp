@@ -34,6 +34,10 @@ public:
         // processi/dispositivi aufio info
         std::function<nlohmann::json()> getAudioDevicesJson;
 		std::function<nlohmann::json()> getAudioProcessesJson;
+        
+        std::function<nlohmann::json()> getLayoutJson;               // /layout
+        std::function<nlohmann::json()> getStateJsonVerbose;         // /state?verbose=1
+        std::function<bool(nlohmann::json&, int /*timeoutMs*/)> popNextStateEvent; // SSE
     };
 
     ApiServer(std::string host, int port, Callbacks cbs, bool enableCORS = false);

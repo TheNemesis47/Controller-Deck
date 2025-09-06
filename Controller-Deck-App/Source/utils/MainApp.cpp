@@ -10,11 +10,27 @@
 #include <fstream>
 #include <cstdio>
 #include <vector>
+#include <ctime>
 
 // solo per auto-pick porta
 #include "Core/Serial/SerialPortEnumerator.hpp"
 
 using Json = nlohmann::json;
+
+std::string MainApp::NowIsoUtc() {
+    using namespace std::chrono;
+    const auto now = system_clock::now();
+    const auto tt = system_clock::to_time_t(now);
+    std::tm tm{};
+#ifdef _WIN32
+    gmtime_s(&tm, &tt);
+#else
+    gmtime_r(&tt, &tm);
+#endif
+    char buf[32];
+    std::strftime(buf, sizeof(buf), "%FT%TZ", &tm);
+    return buf;
+}
 
 // -----------------------------------------------------------------------------
 // Helpers thread-safe (locali al file)
@@ -232,6 +248,74 @@ bool MainApp::closeSerialPort(std::string& err) {
     }
 }
 
+Json MainApp::getLayoutJson() const {
+    // Se in futuro vorrai leggerlo da m_cfg, serializzalo qui.
+    // Per ora: layout generato coerente con 5 button + 5 slider (esempio).
+    Json controls = Json::array();
+    for (int i = 0; i < 5; ++i) {
+        controls.push_back({
+            {"id", fmt::format("btn_{:02d}", i+1)},
+            {"type", "button"},
+            {"label", fmt::format("Button {}", i+1)},
+            {"row",  i / 3},
+            {"col",  i % 3},
+            {"x",    (i % 3) * 90 + 10},
+            {"y",    (i / 3) * 90 + 10},
+            {"w",    80},
+            {"h",    80}
+        });
+    }
+    Json sliders = Json::array();
+    for (int i = 0; i < 5; ++i) {
+        sliders.push_back({
+            {"id", fmt::format("slider_{:02d}", i+1)},
+            {"type", "slider"},
+            {"label", fmt::format("Slider {}", i+1)},
+            {"orientation", "vertical"},
+            {"range", {{"min",0.0},{"max",1.0},{"step",0.01}}},
+            {"x", 300},
+            {"y", 10 + i * 220},
+            {"w", 20},
+            {"h", 200}
+        });
+    }
+    return Json{ {"controls", controls}, {"sliders", sliders} };
+}
+
+Json MainApp::getStateJson(bool verbose) const {
+    // Riusa l'esistente per compat
+    Json base = const_cast<MainApp*>(this)->getStateJson();
+    if (!verbose) return base;
+
+    Json out = {
+        {"buttons", base["buttons"]},
+        {"sliders", base["sliders"]},
+        {"timestamp", NowIsoUtc()},
+        {"meta", { {"source","controller-deck"}, {"verbose",true} }},
+        {"layout", getLayoutJson()}
+    };
+    return out;
+}
+
+void MainApp::publishStateChange(const Json& ev) {
+    {
+        std::lock_guard<std::mutex> lk(m_evtMx);
+        m_evtQ.push_back(ev);
+        if (m_evtQ.size() > 1024) m_evtQ.pop_front();
+    }
+    m_evtCv.notify_all();
+}
+
+bool MainApp::popNextStateEventBlocking(Json& out, std::chrono::milliseconds timeout) {
+    std::unique_lock<std::mutex> lk(m_evtMx);
+    if (m_evtQ.empty()) {
+        if (!m_evtCv.wait_for(lk, timeout, [&]{ return !m_evtQ.empty(); })) return false;
+    }
+    out = std::move(m_evtQ.front());
+    m_evtQ.pop_front();
+    return true;
+}
+
 // -------------------- run() --------------------
 
 int MainApp::run() {
@@ -275,12 +359,39 @@ int MainApp::run() {
             running = false;
         }
 
-        // Applica mapping SOLO se la seriale è connessa
         if (IsSerialConnected(m_serial, m_serialMtx)) {
             DeckState cur = ReadDeckStateSafe(m_serial, m_serialMtx);
+
+            // --- DIFF: pubblica eventi per il FE ---
+            // Sliders
+            for (int i = 0; i < 5; ++i) {
+                if (cur.sliders[i] != prev.sliders[i]) {
+                    publishStateChange(Json{
+                        {"type","slider"},
+                        {"id",   fmt::format("slider_{:02d}", i+1)},
+                        {"value", cur.sliders[i]},
+                        {"prev",  prev.sliders[i]},
+                        {"timestamp", NowIsoUtc()}
+                    });
+                }
+            }
+            // Buttons
+            for (int i = 0; i < 5; ++i) {
+                if (cur.buttons[i] != prev.buttons[i]) {
+                    publishStateChange(Json{
+                        {"type","button"},
+                        {"id",   fmt::format("btn_{:02d}", i+1)},
+                        {"pressed", cur.buttons[i] != 0},
+                        {"prev",    prev.buttons[i] != 0},
+                        {"timestamp", NowIsoUtc()}
+                    });
+                }
+            }
+
+            // Applica mapping e aggiorna prev
             m_mapper.applyChanges(m_cfg, m_master, m_sessions, cur, prev);
+            prev = cur;
         }
-        // altrimenti: non toccare l’audio, non aggiornare prev
 
         Sleep(10);
     }

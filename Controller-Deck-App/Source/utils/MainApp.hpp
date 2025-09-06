@@ -3,6 +3,9 @@
 #include <mutex>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <deque>
+#include <condition_variable>
+#include <chrono>
 
 #include "utils/Config.hpp"
 #include "utils/MappingExecutor.hpp"
@@ -25,8 +28,15 @@ public:
     bool closeSerialPort(std::string& err);                              // /serial/close(POST)
     std::vector<std::string> listSerialPorts();
 
-    // Euristica “fullscreen” esposta al wiring audio/processes
     bool isProcessFullscreen(unsigned long pid) const;
+
+    [[nodiscard]] nlohmann::json getLayoutJson() const;
+    [[nodiscard]] nlohmann::json getStateJson(bool verbose) const; // /state?verbose=1
+
+    // Event bus per SSE
+    void publishStateChange(const nlohmann::json& ev);
+    bool popNextStateEventBlocking(nlohmann::json& out, std::chrono::milliseconds timeout);
+
 
 private:
     // ---- setup di base ----
@@ -37,6 +47,11 @@ private:
     // ---- stato app ----
     std::string m_configPath;
     AppConfig   m_cfg;
+
+    // Event queue
+    mutable std::mutex m_evtMx;
+    std::condition_variable m_evtCv;
+    std::deque<nlohmann::json> m_evtQ;
 
     // componenti runtime
     SerialController* m_serial = nullptr;
@@ -50,6 +65,9 @@ private:
     // sync (proteggono file config e seriale)
     std::mutex m_cfgMtx;
     std::mutex m_serialMtx;
+
+    // Helper
+    static std::string NowIsoUtc();
 
     // ---- helper interni ----
     static bool IsProcessLikelyFullscreen(unsigned long pid);
