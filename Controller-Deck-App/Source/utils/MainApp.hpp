@@ -6,6 +6,7 @@
 #include <deque>
 #include <condition_variable>
 #include <chrono>
+#include <atomic>
 
 #include "utils/Config.hpp"
 #include "utils/MappingExecutor.hpp"
@@ -13,6 +14,7 @@
 #include "Core/Audio/AudioController.hpp"
 #include "Core/Audio/AudioSessionController.hpp"
 #include "Api/ApiServer.hpp"
+#include "Core/Serial/InputSmoother.hpp"
 
 class MainApp {
 public:
@@ -27,9 +29,11 @@ public:
     bool selectSerialPort(const std::string& port, unsigned baud, std::string& err); // /serial/select (POST)
     bool closeSerialPort(std::string& err);                              // /serial/close(POST)
     std::vector<std::string> listSerialPorts();
+    void requestShutdown();
 
     bool isProcessFullscreen(unsigned long pid) const;
 
+    nlohmann::json getSerialStatusJson();
     [[nodiscard]] nlohmann::json getLayoutJson() const;
     [[nodiscard]] nlohmann::json getStateJson(bool verbose) const; // /state?verbose=1
 
@@ -43,6 +47,7 @@ private:
     bool loadConfigStrictOrDie();
     bool initControllersOrDie(const std::string& port, unsigned baud);
     std::string pickPortAuto();
+    InputSmoother        m_smoother;
 
     // ---- stato app ----
     std::string m_configPath;
@@ -52,6 +57,7 @@ private:
     mutable std::mutex m_evtMx;
     std::condition_variable m_evtCv;
     std::deque<nlohmann::json> m_evtQ;
+    std::atomic<bool> m_shouldExit{ false };
 
     // componenti runtime
     SerialController* m_serial = nullptr;

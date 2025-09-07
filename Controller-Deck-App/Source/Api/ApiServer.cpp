@@ -1,6 +1,7 @@
 ﻿#include "ApiServer.hpp"
 #include <fmt/core.h>
 #include <regex>
+#include <cstring>
 
 using Json = nlohmann::json;
 
@@ -14,7 +15,15 @@ bool ApiServer::start() {
     if (m_running.exchange(true)) return false;
     m_srv = std::make_unique<httplib::Server>();
     installRoutes();
-    m_thr = std::thread(&ApiServer::run, this);
+    try {
+        m_thr = std::thread(&ApiServer::run, this);   // <<-- può lanciare std::system_error
+    }
+    catch (const std::system_error& e) {
+        fmt::print("[API] FATAL: cannot start server thread: {}\n", e.what());
+        m_srv.reset();
+        m_running.store(false);
+        return false;
+    }
     return true;
 }
 
@@ -26,9 +35,21 @@ void ApiServer::stop() {
 }
 
 void ApiServer::run() {
-    fmt::print("[API] Listening http://{}:{} (CORS: {})\n", m_host, m_port, m_cors ? "on" : "off");
-    m_srv->listen(m_host.c_str(), m_port);
+    try {
+        fmt::print("[API] Listening http://{}:{} (CORS: {})\n", m_host, m_port, m_cors ? "on" : "off");
+        if (!m_srv->listen(m_host.c_str(), m_port)) {
+            fmt::print("[API] listen() failed or stopped\n");
+        }
+    }
+    catch (const std::exception& e) {
+        fmt::print("[API] FATAL in server thread: {}\n", e.what());
+    }
+    catch (...) {
+        fmt::print("[API] FATAL in server thread: unknown exception\n");
+    }
 }
+
+
 
 void ApiServer::setCORSHeaders(httplib::Response& res) const {
     if (!m_cors) return;
@@ -50,6 +71,10 @@ void ApiServer::fail(httplib::Response& res, int status, const std::string& msg)
 }
 
 void ApiServer::installRoutes() {
+    m_srv->set_logger([](const httplib::Request& req, const httplib::Response& res) {
+        fmt::print("[HTTP] {} {} -> {}\n", req.method, req.path, res.status);
+        });
+
     // 404 JSON
     m_srv->set_error_handler([this](const httplib::Request&, httplib::Response& res) {
         fail(res, 404, "not_found");
@@ -64,9 +89,15 @@ void ApiServer::installRoutes() {
 
     // GET /health
     m_srv->Get("/health", [this](const httplib::Request&, httplib::Response& res) {
-        ok(res, Json{ {"alive", true} });
+        Json payload = { {"alive", true} };
+        if (m_cbs.getSerialStatusJson) {
+            try { payload["serial"] = m_cbs.getSerialStatusJson(); }
+            catch (...) { /* se fallisce, lasciamo solo alive */ }
+        }
+        ok(res, payload);
         setCORSHeaders(res);
         });
+
 
     // GET /version
     m_srv->Get("/version", [this](const httplib::Request&, httplib::Response& res) {
@@ -144,36 +175,63 @@ void ApiServer::installRoutes() {
         if (!m_cbs.popNextStateEvent) { fail(res, 404, "not_supported"); setCORSHeaders(res); return; }
 
         res.set_header("Content-Type", "text/event-stream");
-        res.set_header("Cache-Control", "no-cache");
+        res.set_header("Cache-Control", "no-cache, no-transform");
         res.set_header("Connection", "keep-alive");
-        if (m_cors) res.set_header("Access-Control-Allow-Origin", "*"); // coerente con CORS glob.
+        if (m_cors) res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("X-Accel-Buffering", "no");
 
         res.set_chunked_content_provider("text/event-stream",
-            // on data
-            [this](size_t, httplib::DataSink& sink) {
-                sink.write(": connected\n\n");
-                if (m_cbs.getStateJsonVerbose) {
-                    auto snap = m_cbs.getStateJsonVerbose();
-                    std::string line = "event: snapshot\ndata: " + snap.dump() + "\n\n";
-                    sink.write(line.c_str(), line.size());
-                }
-                while (sink.is_writable()) {
-                    nlohmann::json ev;
-                    const bool ok = m_cbs.popNextStateEvent(ev, /*timeoutMs*/1000);
-                    if (ok) {
-                        std::string line = "event: stateChanged\ndata: " + ev.dump() + "\n\n";
-                        if (!sink.write(line.c_str(), line.size())) break;
-                    } else {
-                        sink.write(": heartbeat\n\n"); // keep-alive
+            [this](size_t, httplib::DataSink& sink) -> bool {
+                try {
+                    const char* ping = ": connected\n\n";
+                    sink.write(ping, std::strlen(ping));
+
+                    if (m_cbs.getStateJsonVerbose) {
+                        auto snap = m_cbs.getStateJsonVerbose();
+                        std::string line = "event: snapshot\ndata: " + snap.dump() + "\n\n";
+                        sink.write(line.c_str(), line.size());
                     }
+
+                    while (sink.is_writable()) {
+                        nlohmann::json ev;
+                        const bool ok = m_cbs.popNextStateEvent(ev, /*timeoutMs*/1000);
+                        if (ok) {
+                            std::string line = "event: stateChanged\ndata: " + ev.dump() + "\n\n";
+                            if (!sink.write(line.c_str(), line.size())) break;
+                        }
+                        else {
+                            const char* hb = ": heartbeat\n\n";
+                            sink.write(hb, std::strlen(hb));
+                        }
+                    }
+                    sink.done();
+                    return true;
                 }
-                sink.done();
-                return true;
+                catch (const std::exception& e) {
+                    fmt::print("[SSE] provider error: {}\n", e.what());
+                    try { sink.done(); }
+                    catch (...) {}
+                    return false;
+                }
+                catch (...) {
+                    fmt::print("[SSE] provider unknown error\n");
+                    try { sink.done(); }
+                    catch (...) {}
+                    return false;
+                }
             },
-            // on done
             [](bool) {}
         );
-    });
+
+        });
+
+
+    // GET /serial/status
+    m_srv->Get("/serial/status", [this](const httplib::Request&, httplib::Response& res) {
+        if (!m_cbs.getSerialStatusJson) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+        ok(res, m_cbs.getSerialStatusJson());
+        setCORSHeaders(res);
+        });
 
     // GET /serial/ports
     m_srv->Get("/serial/ports", [this](const httplib::Request&, httplib::Response& res) {
@@ -239,6 +297,57 @@ void ApiServer::installRoutes() {
     m_srv->Get("/audio/processes", [this](const httplib::Request&, httplib::Response& res) {
         if (!m_cbs.getAudioProcessesJson) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
         ok(res, m_cbs.getAudioProcessesJson());
+        setCORSHeaders(res);
+        });
+
+    // POST /control/shutdown  { "confirm": "SHUTDOWN" }
+    m_srv->Post("/control/shutdown", [this](const httplib::Request& req, httplib::Response& res) {
+        if (!m_cbs.requestShutdown) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+        try {
+            Json j = Json::parse(req.body);
+            const std::string confirm = j.value("confirm", "");
+            if (confirm != "SHUTDOWN") { fail(res, 400, "confirmation_required"); setCORSHeaders(res); return; }
+            ok(res, Json{ {"shutting_down", true} }); setCORSHeaders(res);
+            std::thread([cb = m_cbs.requestShutdown] {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(100ms);
+                cb();
+                }).detach();
+        }
+        catch (...) {
+            fail(res, 400, "bad_json"); setCORSHeaders(res);
+        }
+        });
+
+    // alias GET dal browser: /control/quit?confirm=SHUTDOWN
+    m_srv->Get("/control/quit", [this](const httplib::Request& req, httplib::Response& res) {
+        if (!m_cbs.requestShutdown) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+        const std::string confirm = req.has_param("confirm") ? req.get_param_value("confirm") : "";
+        if (confirm != "SHUTDOWN") { fail(res, 400, "confirmation_required"); setCORSHeaders(res); return; }
+        ok(res, Json{ {"shutting_down", true} }); setCORSHeaders(res);
+        std::thread([cb = m_cbs.requestShutdown] {
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(100ms);
+            cb();
+            }).detach();
+        });
+
+    // GET /__routes  -> per vedere se questa build è effettiva
+    m_srv->Get("/__routes", [this](const httplib::Request&, httplib::Response& res) {
+        ok(res, Json{
+            {"routes", Json::array({
+                "/health", "/version", "/config", "/state", "/layout",
+                "/events/state", "/serial/ports", "/serial/select", "/serial/close",
+                "/audio/devices", "/audio/processes",
+                "/control/shutdown (POST)", "/control/quit (GET)"
+            })}
+            });
+        setCORSHeaders(res);
+        });
+
+    // GET /__whoami  -> tag build (data/ora della TUA installRoutes)
+    m_srv->Get("/__whoami", [this](const httplib::Request&, httplib::Response& res) {
+        ok(res, Json{ {"build", std::string(__DATE__) + " " + __TIME__} });
         setCORSHeaders(res);
         });
 

@@ -20,13 +20,17 @@
     ],
     "sliders": [
       "master_volume",
-      "discord.exe",
-      "chrome.exe",
+      "Microfono (Yeti Classic)",
+      [
+        "amplibraryagent.exe"
+      ],
       [
         "AppleMusic.exe",
         "AMPLibraryAgent.exe"
       ],
-      null
+      [
+        "parsecd.exe"
+      ]
     ]
   },
   "serial": {

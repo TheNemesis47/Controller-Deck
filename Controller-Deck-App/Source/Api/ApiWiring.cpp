@@ -31,5 +31,8 @@ ApiServer::Callbacks ApiWiring::MakeCallbacks(MainApp& app) {
     cbs.popNextStateEvent = [&app](nlohmann::json& out, int timeoutMs) {
         return app.popNextStateEventBlocking(out, std::chrono::milliseconds(timeoutMs));
     };
+    cbs.getSerialStatusJson = [&app]() { return app.getSerialStatusJson(); };
     return cbs;
+    cbs.requestShutdown = [&app]() { app.requestShutdown(); };
+
 }

@@ -27,6 +27,9 @@
     <ClInclude Include="Source\Core\Core.h" />
     <ClInclude Include="Source\Core\DeckState.hpp" />
     <ClInclude Include="Source\Core\MessageParser.hpp" />
+    <ClInclude Include="Source\Core\Serial\InputSmoother.hpp">
+      <Filter>Serial</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Core\Serial\Serial.hpp">
       <Filter>Serial</Filter>
     </ClInclude>
@@ -52,6 +55,9 @@
     </ClCompile>
     <ClCompile Include="Source\Core\Core.cpp" />
     <ClCompile Include="Source\Core\MessageParser.cpp" />
+    <ClCompile Include="Source\Core\Serial\InputSmoother.cpp">
+      <Filter>Serial</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Core\Serial\Serial.cpp">
       <Filter>Serial</Filter>
     </ClCompile>

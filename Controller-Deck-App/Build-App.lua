@@ -48,8 +48,11 @@ project "Controller-Deck-App"
 
    filter "configurations:Release"
        defines { "RELEASE" }
+       kind "WindowedApp"                 -- niente console in Release
+       linkoptions { "/ENTRY:mainCRTStartup" }  -- usa main() come entry GUI
+       flags { "LinkTimeOptimization" }
        runtime "Release"
-       optimize "On"
+       optimize "Full"
        symbols "On"
 
    filter "configurations:Dist"

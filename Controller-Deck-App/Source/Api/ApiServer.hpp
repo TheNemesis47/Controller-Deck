@@ -6,6 +6,9 @@
 #include <vector>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <deque>
+#include <condition_variable>
+#include <chrono>
 
 // Assicurati che in premake ci sia: includedirs { "ThirdParty/cpp-httplib" }
 #include <../ThirdParty/cpp-httplib/httplib.h>
@@ -35,9 +38,12 @@ public:
         std::function<nlohmann::json()> getAudioDevicesJson;
 		std::function<nlohmann::json()> getAudioProcessesJson;
         
+        std::function<nlohmann::json()> getSerialStatusJson;
         std::function<nlohmann::json()> getLayoutJson;               // /layout
         std::function<nlohmann::json()> getStateJsonVerbose;         // /state?verbose=1
         std::function<bool(nlohmann::json&, int /*timeoutMs*/)> popNextStateEvent; // SSE
+
+        std::function<void()> requestShutdown;
     };
 
     ApiServer(std::string host, int port, Callbacks cbs, bool enableCORS = false);

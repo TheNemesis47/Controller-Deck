@@ -1,22 +1,36 @@
 {
-  "serial": { "port": "auto", "baud": 115200 },
   "mapping": {
-    "sliders": [
-        "master_volume", 
-        "discord.exe", 
-        "chrome.exe", 
-        [
-          "AppleMusic.exe",
-          "AMPLibraryAgent.exe"
-        ], 
-        null
-      ],
     "buttons": [
-      "text:M",                               
-      "hotkey:CTRL+V",                        
-      "media:play_pause",                     
-      ["text:c", "delay:40", "text:i", "delay:40", "text:a", "delay:40", "text:o"], 
-      ["toggle_mute", "text:  (muted)"]       
+      "text:M",
+      "hotkey:CTRL+V",
+      "media:play_pause",
+      [
+        "text:c",
+        "delay:40",
+        "text:i",
+        "delay:40",
+        "text:a",
+        "delay:40",
+        "text:o"
+      ],
+      [
+        "toggle_mute",
+        "text:  (muted)"
+      ]
+    ],
+    "sliders": [
+      "master_volume",
+      "discord.exe",
+      "chrome.exe",
+      [
+        "AppleMusic.exe",
+        "AMPLibraryAgent.exe"
+      ],
+      null
     ]
+  },
+  "serial": {
+    "baud": 115200,
+    "port": "COM4"
   }
 }

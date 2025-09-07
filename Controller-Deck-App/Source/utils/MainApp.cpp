@@ -121,10 +121,45 @@ bool MainApp::initControllersOrDie(const std::string& port, unsigned baud) {
 }
 
 // -------------------- Thin wrappers per ApiWiring --------------------
+Json MainApp::getSerialStatusJson() {
+    // Rispetta l'ordine di lock già usato altrove: prima seriale, poi config
+    std::lock_guard<std::mutex> lk1(m_serialMtx);
+    const bool connected = (m_serial != nullptr);
 
-Json MainApp::getStateJson() {
+    std::string port;
+    unsigned baud = 0;
+    { // leggi config protetta
+        std::lock_guard<std::mutex> lk2(m_cfgMtx);
+        port = m_cfg.port;
+        baud = m_cfg.baud;
+    }
+
+    Json out = { {"connected", connected} };
+    if (connected) {
+        out["port"] = port;
+        out["baud"] = baud;
+    }
+    return out;
+}
+
+Json MainApp::getStateJson(bool verbose) const {
+    Json base = const_cast<MainApp*>(this)->getStateJson();
+    if (!verbose) return base;
+
+    Json out = {
+        {"buttons", base["buttons"]},
+        {"sliders", base["sliders"]},
+        {"timestamp", NowIsoUtc()},
+        {"meta", { {"source","controller-deck"}, {"verbose",true} }},
+        {"layout", getLayoutJson()},
+        {"serial", const_cast<MainApp*>(this)->getSerialStatusJson()}
+    };
+    return out;
+}
+
+nlohmann::json MainApp::getStateJson() {
     DeckState s = ReadDeckStateSafe(m_serial, m_serialMtx);
-    return Json{
+    return nlohmann::json{
         {"sliders", { s.sliders[0], s.sliders[1], s.sliders[2], s.sliders[3], s.sliders[4] }},
         {"buttons", { s.buttons[0], s.buttons[1], s.buttons[2], s.buttons[3], s.buttons[4] }}
     };
@@ -282,20 +317,6 @@ Json MainApp::getLayoutJson() const {
     return Json{ {"controls", controls}, {"sliders", sliders} };
 }
 
-Json MainApp::getStateJson(bool verbose) const {
-    // Riusa l'esistente per compat
-    Json base = const_cast<MainApp*>(this)->getStateJson();
-    if (!verbose) return base;
-
-    Json out = {
-        {"buttons", base["buttons"]},
-        {"sliders", base["sliders"]},
-        {"timestamp", NowIsoUtc()},
-        {"meta", { {"source","controller-deck"}, {"verbose",true} }},
-        {"layout", getLayoutJson()}
-    };
-    return out;
-}
 
 void MainApp::publishStateChange(const Json& ev) {
     {
@@ -307,13 +328,30 @@ void MainApp::publishStateChange(const Json& ev) {
 }
 
 bool MainApp::popNextStateEventBlocking(Json& out, std::chrono::milliseconds timeout) {
-    std::unique_lock<std::mutex> lk(m_evtMx);
-    if (m_evtQ.empty()) {
-        if (!m_evtCv.wait_for(lk, timeout, [&]{ return !m_evtQ.empty(); })) return false;
+    try {
+        std::unique_lock<std::mutex> lk(m_evtMx);
+        if (m_evtQ.empty()) {
+            if (!m_evtCv.wait_for(lk, timeout, [&] { return !m_evtQ.empty(); }))
+                return false; // timeout
+        }
+        out = std::move(m_evtQ.front());
+        m_evtQ.pop_front();
+        return true;
     }
-    out = std::move(m_evtQ.front());
-    m_evtQ.pop_front();
-    return true;
+    catch (const std::system_error& e) {
+        // logga e torna "nessun evento", così il provider SSE resta vivo
+        fmt::print("[EVT] wait error: {}\n", e.what());
+        return false;
+    }
+    catch (...) {
+        fmt::print("[EVT] wait unknown error\n");
+        return false;
+    }
+}
+
+
+void MainApp::requestShutdown() {
+    m_shouldExit.store(true, std::memory_order_relaxed);
 }
 
 // -------------------- run() --------------------
@@ -323,6 +361,9 @@ int MainApp::run() {
 
     std::string port = (m_cfg.port == "auto") ? pickPortAuto() : m_cfg.port;
     if (!initControllersOrDie(port, m_cfg.baud)) return 4;
+
+    m_smoother.reset();
+    m_smoother.setParamsAll(FaderSmoothingParams{ /*deadband*/ 2, /*alpha*/ 0.20f });
 
     // Costruzione callbacks (spostata in ApiWiring)
     ApiServer::Callbacks cbs = ApiWiring::MakeCallbacks(*this);
@@ -339,6 +380,7 @@ int MainApp::run() {
 
     // Attendi (max ~800 ms) un primo campione non-zero; altrimenti niente preapply
     DeckState first = ReadDeckStateSafe(m_serial, m_serialMtx);
+    m_smoother.apply(first);
     DWORD start = GetTickCount();
     while (isLikelyUninitialized(first) && (GetTickCount() - start) < 800) {
         Sleep(10);
@@ -352,7 +394,10 @@ int MainApp::run() {
 
     bool running = true;
     while (running) {
-        // ESC solo se la console è in foreground
+        if (m_shouldExit.load(std::memory_order_relaxed)) {
+            running = false;           // -> esce e fa il teardown già presente
+            break;
+        }
         HWND fg = GetForegroundWindow();
         HWND con = GetConsoleWindow();
         if (fg == con && (GetAsyncKeyState(VK_ESCAPE) & 0x8000)) {
@@ -361,6 +406,8 @@ int MainApp::run() {
 
         if (IsSerialConnected(m_serial, m_serialMtx)) {
             DeckState cur = ReadDeckStateSafe(m_serial, m_serialMtx);
+
+            m_smoother.apply(cur);
 
             // --- DIFF: pubblica eventi per il FE ---
             // Sliders
