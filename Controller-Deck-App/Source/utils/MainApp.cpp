@@ -3,7 +3,8 @@
 #include "utils/Utils.hpp"
 #include "utils/ProcessUtils.hpp"       
 #include "utils/AudioDiscovery.hpp"     
-#include "../Api/ApiWiring.hpp" 
+#include "../Api/ApiWiring.hpp"
+#include "utils/TrayIcon.hpp"
 
 #include <fmt/core.h>
 #include <Windows.h>
@@ -351,6 +352,7 @@ bool MainApp::popNextStateEventBlocking(Json& out, std::chrono::milliseconds tim
 
 
 void MainApp::requestShutdown() {
+	// invio a fe di shutdown
     m_shouldExit.store(true, std::memory_order_relaxed);
 }
 
@@ -362,14 +364,26 @@ int MainApp::run() {
     std::string port = (m_cfg.port == "auto") ? pickPortAuto() : m_cfg.port;
     if (!initControllersOrDie(port, m_cfg.baud)) return 4;
 
+#if !defined(_DEBUG)
+    FreeConsole(); // in Release niente console se il target è ConsoleApp
+#endif
+
     m_smoother.reset();
     m_smoother.setParamsAll(FaderSmoothingParams{ /*deadband*/ 2, /*alpha*/ 0.20f });
 
     // Costruzione callbacks (spostata in ApiWiring)
     ApiServer::Callbacks cbs = ApiWiring::MakeCallbacks(*this);
-
     m_api = std::make_unique<ApiServer>("127.0.0.1", 8765, cbs, /*enableCORS=*/true);
     m_api->start();
+
+    // TRAY ICON: UNA SOLA ISTANZA, con callback che fa shutdown pulito
+    std::wstring uiUrl = L"http://localhost:5173/";
+    auto tray = std::make_unique<TrayIcon>(
+        L"Controller-Deck",
+        uiUrl,
+        /*onQuit=*/[this]() { this->requestShutdown(); }
+    );
+    tray->start();
 
     fmt::print("REST su http://127.0.0.1:8765  |  Premi ESC per uscire.\n");
 
@@ -395,31 +409,33 @@ int MainApp::run() {
     bool running = true;
     while (running) {
         if (m_shouldExit.load(std::memory_order_relaxed)) {
-            running = false;           // -> esce e fa il teardown già presente
+            running = false; // -> esce e fa il teardown già presente
             break;
         }
+
+#ifdef _DEBUG
         HWND fg = GetForegroundWindow();
         HWND con = GetConsoleWindow();
         if (fg == con && (GetAsyncKeyState(VK_ESCAPE) & 0x8000)) {
             running = false;
         }
+#endif
 
         if (IsSerialConnected(m_serial, m_serialMtx)) {
             DeckState cur = ReadDeckStateSafe(m_serial, m_serialMtx);
-
             m_smoother.apply(cur);
 
-            // --- DIFF: pubblica eventi per il FE ---
+            // --- Pubblica eventi per il FE ---
             // Sliders
             for (int i = 0; i < 5; ++i) {
                 if (cur.sliders[i] != prev.sliders[i]) {
                     publishStateChange(Json{
                         {"type","slider"},
-                        {"id",   fmt::format("slider_{:02d}", i+1)},
+                        {"id",   fmt::format("slider_{:02d}", i + 1)},
                         {"value", cur.sliders[i]},
                         {"prev",  prev.sliders[i]},
                         {"timestamp", NowIsoUtc()}
-                    });
+                        });
                 }
             }
             // Buttons
@@ -427,11 +443,11 @@ int MainApp::run() {
                 if (cur.buttons[i] != prev.buttons[i]) {
                     publishStateChange(Json{
                         {"type","button"},
-                        {"id",   fmt::format("btn_{:02d}", i+1)},
+                        {"id",   fmt::format("btn_{:02d}", i + 1)},
                         {"pressed", cur.buttons[i] != 0},
                         {"prev",    prev.buttons[i] != 0},
                         {"timestamp", NowIsoUtc()}
-                    });
+                        });
                 }
             }
 
@@ -443,10 +459,14 @@ int MainApp::run() {
         Sleep(10);
     }
 
+    // Teardown ordinato
     if (m_api) { m_api->stop(); m_api.reset(); }
+    if (tray) { tray->stop(); tray.reset(); }
 
     m_sessions.shutdown();
     m_master.shutdown();
     if (m_serial) { m_serial->stop(); delete m_serial; m_serial = nullptr; }
+
     return 0;
 }
+

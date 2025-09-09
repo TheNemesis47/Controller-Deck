@@ -1,62 +1,69 @@
 project "Controller-Deck-App"
-   kind "ConsoleApp"
-   language "C++"
-   cppdialect "C++20"
-   characterset "Unicode"
-   targetdir "Binaries/%{cfg.buildcfg}"
-   staticruntime "off"
+    kind "ConsoleApp"              -- Debug: console per i log
+    language "C++"
+    cppdialect "C++20"
+    characterset "Unicode"
+    staticruntime "off"
 
-   files { 
-       "Source/**.h", 
-       "Source/**.cpp",
-       "Source/**.hpp"
-   }
+    -- OUTPUT (lascia il tuo OutputDir se già definito altrove)
+    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")
+    objdir    ("../Binaries/Intermediates/" .. OutputDir .. "/%{prj.name}")
 
-   includedirs
-   {
-      "Source",
+    files {
+        "Source/**.h",
+        "Source/**.hpp",
+        "Source/**.cpp",
+        -- risorse per icona tray (facoltativo ma consigliato)
+        "res/**.rc",
+        "Assets/**.ico"
+    }
 
-	  -- Include Core
-	  "../Controller-Deck-Core/Source"
-   }
+    includedirs {
+        "Source",
+        "../Controller-Deck-Core/Source"   -- include Core
+    }
 
-   links
-   {
-      "Controller-Deck-Core"
-   }
+    links {
+        "Controller-Deck-Core"
+    }
 
-   targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")
-   objdir ("../Binaries/Intermediates/" .. OutputDir .. "/%{prj.name}")
+    filter "system:windows"
+        systemversion "latest"
+        defines { "_WIN32_WINNT=0x0A00", "WIN32_LEAN_AND_MEAN", "NOMINMAX", "ASIO_STANDALONE" }
+        buildoptions { "/utf-8" }
 
-   filter "system:windows"
-       systemversion "latest"
-       defines {
-           "_WIN32_WINNT=0X0A00",
-           "WIN32_LEAN_AND_MEAN",
-           "NOMINMAX",
-           "ASIO_STANDALONE"
-       }
-       buildoptions { "/utf-8"} -- richiesto da ftm per i file di risorse
-       -- librerie di sistema per asio + SetupDi* (enumerazione COM)
-        links { "setupapi", "ws2_32", "mswsock", "advapi32", "ole32", "uuid", "mmdevapi" }
-    filter{}
+        -- 🔗 Librerie Win32 necessarie per la tray (+ le tue già presenti)
+        links {
+            "User32", "Gdi32", "Comctl32", "Shell32",  -- tray/menu/icone
+            "setupapi", "ws2_32", "mswsock", "advapi32", "ole32", "uuid", "mmdevapi"
+        }
+    filter {}
 
-   filter "configurations:Debug"
-       defines { "DEBUG" }
-       runtime "Debug"
-       symbols "On"
+    -- DEBUG: tieni la console (comodo per printf/log)
+    filter "configurations:Debug"
+        defines { "DEBUG" }
+        runtime "Debug"
+        symbols "On"
+        kind "ConsoleApp"
+    filter {}
 
-   filter "configurations:Release"
-       defines { "RELEASE" }
-       kind "WindowedApp"                 -- niente console in Release
-       linkoptions { "/ENTRY:mainCRTStartup" }  -- usa main() come entry GUI
-       flags { "LinkTimeOptimization" }
-       runtime "Release"
-       optimize "Full"
-       symbols "On"
+    -- RELEASE: niente console ma resta main()
+    filter "configurations:Release"
+        defines { "RELEASE" }
+        runtime "Release"
+        optimize "Full"
+        symbols "On"
+        kind "WindowedApp"                  -- -> /SUBSYSTEM:WINDOWS
+        linkoptions { "/ENTRY:mainCRTStartup" } -- usa main() senza WinMain, nessuna console
+        flags { "LinkTimeOptimization" }
+    filter {}
 
-   filter "configurations:Dist"
-       defines { "DIST" }
-       runtime "Release"
-       optimize "On"
-       symbols "Off"
+    -- DIST (se vuoi uguale a Release)
+    filter "configurations:Dist"
+        defines { "DIST" }
+        runtime "Release"
+        optimize "On"
+        symbols "Off"
+        kind "WindowedApp"
+        linkoptions { "/ENTRY:mainCRTStartup" }
+    filter {}

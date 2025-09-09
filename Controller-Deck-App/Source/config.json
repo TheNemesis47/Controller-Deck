@@ -1,32 +1,25 @@
 {
   "mapping": {
     "buttons": [
-      "text:M",
+      "hotkey:WIN + SHIFT + s",
+      "hotkey:CTRL+C",
       "hotkey:CTRL+V",
       "media:play_pause",
-      [
-        "text:c",
-        "delay:40",
-        "text:i",
-        "delay:40",
-        "text:a",
-        "delay:40",
-        "text:o"
-      ],
-      [
-        "toggle_mute",
-        "text:  (muted)"
-      ]
+      "media:next"
     ],
     "sliders": [
-      "master_volume",
-      "discord.exe",
-      "chrome.exe",
+      null,
+      "Microfono (Yeti Classic)",
       [
-        "AppleMusic.exe",
-        "AMPLibraryAgent.exe"
+        "applemusic.exe",
+        "amplibraryagent.exe"
       ],
-      null
+      [
+        "chrome.exe"
+      ],
+      [
+        "discord.exe"
+      ]
     ]
   },
   "serial": {

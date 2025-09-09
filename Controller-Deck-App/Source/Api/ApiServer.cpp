@@ -82,7 +82,11 @@ void ApiServer::installRoutes() {
         });
 
     // Preflight CORS
-    m_srv->Options(R"(.*)", [this](const httplib::Request&, httplib::Response& res) {
+    m_srv->Options(R"(.*)", [this](const httplib::Request& req, httplib::Response& res) {
+        if (req.path == "/shutdown" || req.path == "/control/shutdown") {
+            res.status = 405; // Method Not Allowed (nessun header CORS qui)
+            return;
+        }
         res.status = 204;
         setCORSHeaders(res);
         });
@@ -300,50 +304,81 @@ void ApiServer::installRoutes() {
         setCORSHeaders(res);
         });
 
-    // POST /control/shutdown  { "confirm": "SHUTDOWN" }
-    m_srv->Post("/control/shutdown", [this](const httplib::Request& req, httplib::Response& res) {
-        if (!m_cbs.requestShutdown) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
-        try {
-            Json j = Json::parse(req.body);
-            const std::string confirm = j.value("confirm", "");
-            if (confirm != "SHUTDOWN") { fail(res, 400, "confirmation_required"); setCORSHeaders(res); return; }
-            ok(res, Json{ {"shutting_down", true} }); setCORSHeaders(res);
-            std::thread([cb = m_cbs.requestShutdown] {
-                using namespace std::chrono_literals;
-                std::this_thread::sleep_for(100ms);
-                cb();
-                }).detach();
-        }
-        catch (...) {
-            fail(res, 400, "bad_json"); setCORSHeaders(res);
-        }
-        });
+    // ---------- SHUTDOWN SOLO VIA POST + JSON + TOKEN (niente CORS) ----------
 
-    // alias GET dal browser: /control/quit?confirm=SHUTDOWN
-    m_srv->Get("/control/quit", [this](const httplib::Request& req, httplib::Response& res) {
-        if (!m_cbs.requestShutdown) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
-        const std::string confirm = req.has_param("confirm") ? req.get_param_value("confirm") : "";
-        if (confirm != "SHUTDOWN") { fail(res, 400, "confirmation_required"); setCORSHeaders(res); return; }
-        ok(res, Json{ {"shutting_down", true} }); setCORSHeaders(res);
+// Token opzionale da variabile d'ambiente: CD_SHUTDOWN_TOKEN
+    const std::string requiredToken = [] {
+        const char* t = std::getenv("CD_SHUTDOWN_TOKEN");
+        return t ? std::string(t) : std::string();
+        }();
+
+    auto check_auth = [&requiredToken](const httplib::Request& req) -> bool {
+        if (requiredToken.empty()) return true; // nessun token richiesto
+        const auto hdr = req.get_header_value("X-Controller-Deck-Token");
+        return !hdr.empty() && hdr == requiredToken;
+        };
+
+    // Risposta + arresto asincrono. NOTA: niente setCORSHeaders(res) qui.
+    auto shutdown_async_nocors = [this](httplib::Response& res) {
+        res.status = 202;
+        Json env = { {"ok", true}, {"result", { {"shutting_down", true} }} };
+        res.set_content(env.dump(), "application/json");
         std::thread([cb = m_cbs.requestShutdown] {
             using namespace std::chrono_literals;
             std::this_thread::sleep_for(100ms);
-            cb();
+            if (cb) cb();
             }).detach();
+        };
+
+    // POST /shutdown  { "confirm": "SHUTDOWN" }
+    m_srv->Post("/shutdown", [this, check_auth, shutdown_async_nocors](const httplib::Request& req, httplib::Response& res) {
+        if (!m_cbs.requestShutdown) { fail(res, 500, "not_available"); return; }
+
+        // Richiedi JSON vero (blocca form POST dal browser)
+        const auto ct = req.get_header_value("Content-Type");
+        if (ct.find("application/json") == std::string::npos) { fail(res, 415, "unsupported_media_type"); return; }
+
+        // Token (se configurato)
+        if (!check_auth(req)) { fail(res, 401, "unauthorized"); return; }
+
+        try {
+            Json j = Json::parse(req.body);
+            const auto confirm = j.value("confirm", "");
+            if (confirm != "SHUTDOWN") { fail(res, 400, "confirmation_required"); return; }
+            shutdown_async_nocors(res);
+        }
+        catch (...) { fail(res, 400, "bad_json"); }
+        });
+
+    // POST /control/shutdown  { "confirm": "SHUTDOWN" }
+    m_srv->Post("/control/shutdown", [this, check_auth, shutdown_async_nocors](const httplib::Request& req, httplib::Response& res) {
+        if (!m_cbs.requestShutdown) { fail(res, 500, "not_available"); return; }
+
+        const auto ct = req.get_header_value("Content-Type");
+        if (ct.find("application/json") == std::string::npos) { fail(res, 415, "unsupported_media_type"); return; }
+
+        if (!check_auth(req)) { fail(res, 401, "unauthorized"); return; }
+
+        try {
+            Json j = Json::parse(req.body);
+            const auto confirm = j.value("confirm", "");
+            if (confirm != "SHUTDOWN") { fail(res, 400, "confirmation_required"); return; }
+            shutdown_async_nocors(res);
+        }
+        catch (...) { fail(res, 400, "bad_json"); }
         });
 
     // GET /__routes  -> per vedere se questa build è effettiva
     m_srv->Get("/__routes", [this](const httplib::Request&, httplib::Response& res) {
-        ok(res, Json{
-            {"routes", Json::array({
-                "/health", "/version", "/config", "/state", "/layout",
-                "/events/state", "/serial/ports", "/serial/select", "/serial/close",
-                "/audio/devices", "/audio/processes",
-                "/control/shutdown (POST)", "/control/quit (GET)"
-            })}
-            });
+        ok(res, Json{ {"routes", Json::array({
+            "/health", "/version", "/config", "/state", "/layout",
+            "/events/state", "/serial/ports", "/serial/select", "/serial/close",
+            "/audio/devices", "/audio/processes",
+            "/control/shutdown (POST)", "/shutdown (POST)"
+        })} });
         setCORSHeaders(res);
         });
+
 
     // GET /__whoami  -> tag build (data/ora della TUA installRoutes)
     m_srv->Get("/__whoami", [this](const httplib::Request&, httplib::Response& res) {
