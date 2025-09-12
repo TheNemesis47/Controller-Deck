@@ -1,7 +1,5 @@
 ﻿#include "Core/Audio/AudioController.hpp"
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
 #include <windows.h>
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>

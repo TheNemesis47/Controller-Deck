@@ -6,6 +6,10 @@ project "Controller-Deck-Core"
    targetdir "Binaries/%{cfg.buildcfg}"
    staticruntime "off"
 
+   -- ✅ Eccezioni ON anche per la libreria
+    exceptionhandling "On"
+    defines { "_HAS_EXCEPTIONS=1", "FMT_USE_EXCEPTIONS=1" }
+
    files { 
        "Source/**.h", 
        "Source/**.cpp",

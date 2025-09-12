@@ -27,7 +27,14 @@ ApiServer::Callbacks ApiWiring::MakeCallbacks(MainApp& app) {
         };
     cbs.getSerialStatusJson = [&app]() { return app.getSerialStatusJson(); };
 
-    cbs.requestShutdown = [&app]() { app.requestShutdown(); }; // <-- importante
+    cbs.requestShutdown = [&app]() { app.requestShutdown(); }; 
+    cbs.selectAudioDeviceById = [&app](const std::string& id, std::string& err) {
+        return app.selectAudioDeviceById(id, err);
+        };
+    cbs.setAudioDeviceVolume = [&app](float v, std::string& err) {
+        return app.setAudioDeviceVolume(v, err);
+        };
+
     return cbs;
 }
 

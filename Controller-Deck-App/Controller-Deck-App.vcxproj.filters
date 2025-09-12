@@ -24,6 +24,12 @@
     <ClInclude Include="Source\utils\ConfigLoader.hpp">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="Source\utils\EventBus.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\Log.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
     <ClInclude Include="Source\utils\MainApp.hpp">
       <Filter>utils</Filter>
     </ClInclude>
@@ -31,6 +37,9 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="Source\utils\ProcessUtils.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\utils\SerialService.hpp">
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="Source\utils\TrayIcon.hpp">
@@ -54,6 +63,9 @@
     <ClCompile Include="Source\utils\ConfigLoader.cpp">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="Source\utils\EventBus.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
     <ClCompile Include="Source\utils\MainApp.cpp">
       <Filter>utils</Filter>
     </ClCompile>
@@ -61,6 +73,9 @@
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="Source\utils\ProcessUtils.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\utils\SerialService.cpp">
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="Source\utils\TrayIcon.cpp">

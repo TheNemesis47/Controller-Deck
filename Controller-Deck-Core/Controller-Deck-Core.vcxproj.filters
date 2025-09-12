@@ -21,6 +21,9 @@
     <ClInclude Include="Source\Core\Audio\AudioController.hpp">
       <Filter>Audio</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\Audio\AudioEndpointController.hpp">
+      <Filter>Audio</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Core\Audio\AudioSessionController.hpp">
       <Filter>Audio</Filter>
     </ClInclude>
@@ -48,6 +51,9 @@
       <Filter>Actions</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\Audio\AudioController.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Audio\AudioEndpointController.cpp">
       <Filter>Audio</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\Audio\AudioSessionController.cpp">

@@ -1,7 +1,9 @@
 ﻿#include "ApiServer.hpp"
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <regex>
 #include <cstring>
+#include "utils/Log.hpp"
 
 using Json = nlohmann::json;
 
@@ -19,7 +21,7 @@ bool ApiServer::start() {
         m_thr = std::thread(&ApiServer::run, this);   // <<-- può lanciare std::system_error
     }
     catch (const std::system_error& e) {
-        fmt::print("[API] FATAL: cannot start server thread: {}\n", e.what());
+        LOGF("[API] FATAL: cannot start server thread: {}", e.what());
         m_srv.reset();
         m_running.store(false);
         return false;
@@ -304,6 +306,38 @@ void ApiServer::installRoutes() {
         setCORSHeaders(res);
         });
 
+    // POST /audio/device/select   { "deviceId": "<IMMDeviceId>" }
+    m_srv->Post("/audio/device/select", [this](const httplib::Request& req, httplib::Response& res) {
+        if (!m_cbs.selectAudioDeviceById) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+        try {
+            Json j = Json::parse(req.body);
+            std::string id = j.value("deviceId", "");
+            if (id.empty()) { fail(res, 400, "missing_deviceId"); setCORSHeaders(res); return; }
+            std::string err;
+            if (!m_cbs.selectAudioDeviceById(id, err)) { fail(res, 400, err.empty() ? "select_failed" : err); }
+            else { ok(res, Json{ {"selected", id} }); }
+        }
+        catch (...) { fail(res, 400, "bad_json"); }
+        setCORSHeaders(res);
+        });
+
+    // POST /audio/device/volume   { "value": 0.0..1.0 }
+    m_srv->Post("/audio/device/volume", [this](const httplib::Request& req, httplib::Response& res) {
+        if (!m_cbs.setAudioDeviceVolume) { fail(res, 500, "not_available"); setCORSHeaders(res); return; }
+        try {
+            Json j = Json::parse(req.body);
+            if (!j.contains("value")) { fail(res, 400, "missing_value"); setCORSHeaders(res); return; }
+            float v = j["value"].get<float>();
+            if (v < 0.f) v = 0.f; if (v > 1.f) v = 1.f;
+            std::string err;
+            if (!m_cbs.setAudioDeviceVolume(v, err)) { fail(res, 400, err.empty() ? "set_volume_failed" : err); }
+            else { ok(res, Json{ {"applied", v} }); }
+        }
+        catch (...) { fail(res, 400, "bad_json"); }
+        setCORSHeaders(res);
+        });
+
+
     // ---------- SHUTDOWN SOLO VIA POST + JSON + TOKEN (niente CORS) ----------
 
 // Token opzionale da variabile d'ambiente: CD_SHUTDOWN_TOKEN
@@ -374,7 +408,8 @@ void ApiServer::installRoutes() {
             "/health", "/version", "/config", "/state", "/layout",
             "/events/state", "/serial/ports", "/serial/select", "/serial/close",
             "/audio/devices", "/audio/processes",
-            "/control/shutdown (POST)", "/shutdown (POST)"
+            "/control/shutdown (POST)", "/shutdown (POST)",
+            "/audio/device/select (POST)", "/audio/device/volume (POST)",
         })} });
         setCORSHeaders(res);
         });

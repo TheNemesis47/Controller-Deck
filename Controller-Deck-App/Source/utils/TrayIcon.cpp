@@ -1,4 +1,6 @@
 ﻿// utils/TrayIcon.cpp
+#include <strsafe.h>
+#include "utils/Log.hpp"
 #include "TrayIcon.hpp"
 #include <objbase.h>
 #include <commctrl.h>
@@ -34,7 +36,15 @@ TrayIcon::~TrayIcon() {
 bool TrayIcon::start() {
     if (m_running.exchange(true)) return false;
     s_instance = this;
-    m_thread = std::thread(&TrayIcon::threadProc, this);
+    try {
+        m_thread = std::thread(&TrayIcon::threadProc, this);
+    }
+    catch (const std::system_error& e) {
+        m_running.store(false);
+        s_instance = nullptr;
+        LOGF("[Tray] std::system_error on start: {} (code {})", e.what(), (int)e.code().value());
+        return false;
+    }
     return true;
 }
 
@@ -48,44 +58,51 @@ void TrayIcon::stop() {
 }
 
 void TrayIcon::threadProc() {
-    // Finestra nascosta per ricevere i messaggi della tray
-    HINSTANCE hInst = GetModuleHandleW(nullptr);
-    const wchar_t* kClassName = L"ControllerDeckTrayWnd";
+    try{// Finestra nascosta per ricevere i messaggi della tray
+        HINSTANCE hInst = GetModuleHandleW(nullptr);
+        const wchar_t* kClassName = L"ControllerDeckTrayWnd";
 
-    WNDCLASSW wc{};
-    wc.lpfnWndProc = &TrayIcon::WndProc;
-    wc.hInstance = hInst;
-    wc.lpszClassName = kClassName;
-    RegisterClassW(&wc);
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = &TrayIcon::WndProc;
+        wc.hInstance = hInst;
+        wc.lpszClassName = kClassName;
+        RegisterClassW(&wc);
 
-    // CreateWindow invisibile (message-only window)
-    m_hwnd = CreateWindowExW(0, kClassName, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, hInst, nullptr);
-    if (!m_hwnd) {
-        m_running.store(false);
-        return;
+        // CreateWindow invisibile (message-only window)
+        m_hwnd = CreateWindowExW(0, kClassName, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, hInst, nullptr);
+        if (!m_hwnd) {
+            m_running.store(false);
+            return;
+        }
+
+        SetWindowLongPtrW(m_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+
+        if (!addIcon()) {
+            DestroyWindow(m_hwnd);
+            m_hwnd = nullptr;
+            m_running.store(false);
+            return;
+        }
+
+        // Loop messaggi
+        MSG msg{};
+        while (m_running.load() && GetMessageW(&msg, nullptr, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+
+        delIcon();
+
+        if (m_hwnd) {
+            DestroyWindow(m_hwnd);
+            m_hwnd = nullptr;
+        }
     }
-
-    SetWindowLongPtrW(m_hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
-
-    if (!addIcon()) {
-        DestroyWindow(m_hwnd);
-        m_hwnd = nullptr;
-        m_running.store(false);
-        return;
+    catch (const std::exception& e) {
+        LOGF("[Tray] thread exception: {}", e.what());
     }
-
-    // Loop messaggi
-    MSG msg{};
-    while (m_running.load() && GetMessageW(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
-    }
-
-    delIcon();
-
-    if (m_hwnd) {
-        DestroyWindow(m_hwnd);
-        m_hwnd = nullptr;
+    catch (...) {
+        LOGF("[Tray] thread unknown exception");
     }
 }
 
@@ -126,12 +143,13 @@ bool TrayIcon::addIcon() {
     nid.uCallbackMessage = WM_TRAYICON;
     nid.hIcon = m_icon;
     nid.guidItem = TRAY_GUID;
-    wcsncpy_s(nid.szTip, m_tooltip.c_str(), _TRUNCATE);
 
-    // Aggiunge l’icona nell’area di notifica
-    if (!Shell_NotifyIconW(NIM_ADD, &nid)) return false;
+    StringCchCopyW(nid.szTip, _countof(nid.szTip), m_tooltip.c_str());
 
-    // Comportamenti moderni (mostrare balloon se vuoi, ecc.) — facoltativo
+    if (!Shell_NotifyIconW(NIM_ADD, &nid)) {
+        LOGF("[Tray] NIM_ADD failed (GetLastError={})", (int)GetLastError());
+        return false;
+    }
     nid.uVersion = NOTIFYICON_VERSION_4;
     Shell_NotifyIconW(NIM_SETVERSION, &nid);
     return true;

@@ -79,12 +79,13 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0A00;WIN32_LEAN_AND_MEAN;NOMINMAX;ASIO_STANDALONE;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=1;FMT_USE_EXCEPTIONS=1;_WIN32_WINNT=0x0A00;WIN32_LEAN_AND_MEAN;NOMINMAX;ASIO_STANDALONE;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>Source;..\Controller-Deck-Core\Source;..\ThirdParty\cpp-httplib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <AdditionalOptions>/EHsc /Zc:preprocessor /Zc:__cplusplus /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <AdditionalOptions>/Zc:preprocessor /Zc:__cplusplus /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
@@ -98,7 +99,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0A00;WIN32_LEAN_AND_MEAN;NOMINMAX;ASIO_STANDALONE;RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=1;FMT_USE_EXCEPTIONS=1;_WIN32_WINNT=0x0A00;WIN32_LEAN_AND_MEAN;NOMINMAX;ASIO_STANDALONE;RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>Source;..\Controller-Deck-Core\Source;..\ThirdParty\cpp-httplib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -107,7 +108,8 @@
       <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <AdditionalOptions>/EHsc /Zc:preprocessor /Zc:__cplusplus /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <AdditionalOptions>/Zc:preprocessor /Zc:__cplusplus /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
@@ -124,7 +126,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0A00;WIN32_LEAN_AND_MEAN;NOMINMAX;ASIO_STANDALONE;DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=1;FMT_USE_EXCEPTIONS=1;_WIN32_WINNT=0x0A00;WIN32_LEAN_AND_MEAN;NOMINMAX;ASIO_STANDALONE;DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>Source;..\Controller-Deck-Core\Source;..\ThirdParty\cpp-httplib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -133,7 +135,8 @@
       <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <AdditionalOptions>/EHsc /Zc:preprocessor /Zc:__cplusplus /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <AdditionalOptions>/Zc:preprocessor /Zc:__cplusplus /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
@@ -152,9 +155,12 @@
     <ClInclude Include="Source\utils\AudioDiscovery.hpp" />
     <ClInclude Include="Source\utils\Config.hpp" />
     <ClInclude Include="Source\utils\ConfigLoader.hpp" />
+    <ClInclude Include="Source\utils\EventBus.hpp" />
+    <ClInclude Include="Source\utils\Log.hpp" />
     <ClInclude Include="Source\utils\MainApp.hpp" />
     <ClInclude Include="Source\utils\MappingExecutor.hpp" />
     <ClInclude Include="Source\utils\ProcessUtils.hpp" />
+    <ClInclude Include="Source\utils\SerialService.hpp" />
     <ClInclude Include="Source\utils\TrayIcon.hpp" />
     <ClInclude Include="Source\utils\Utils.hpp" />
   </ItemGroup>
@@ -164,9 +170,11 @@
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\utils\AudioDiscovery.cpp" />
     <ClCompile Include="Source\utils\ConfigLoader.cpp" />
+    <ClCompile Include="Source\utils\EventBus.cpp" />
     <ClCompile Include="Source\utils\MainApp.cpp" />
     <ClCompile Include="Source\utils\MappingExecutor.cpp" />
     <ClCompile Include="Source\utils\ProcessUtils.cpp" />
+    <ClCompile Include="Source\utils\SerialService.cpp" />
     <ClCompile Include="Source\utils\TrayIcon.cpp" />
   </ItemGroup>
   <ItemGroup>

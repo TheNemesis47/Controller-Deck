@@ -5,6 +5,10 @@ project "Controller-Deck-App"
     characterset "Unicode"
     staticruntime "off"
 
+    -- ✅ Eccezioni ON a livello progetto (ridondante ma sicuro)
+    exceptionhandling "On"
+    defines { "_HAS_EXCEPTIONS=1", "FMT_USE_EXCEPTIONS=1" }
+
     -- OUTPUT (lascia il tuo OutputDir se già definito altrove)
     targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")
     objdir    ("../Binaries/Intermediates/" .. OutputDir .. "/%{prj.name}")

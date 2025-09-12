@@ -8,10 +8,11 @@
       "media:next"
     ],
     "sliders": [
-      null,
+      [
+        "discord.exe"
+      ],
       "Microfono (Yeti Classic)",
       [
-        "applemusic.exe",
         "amplibraryagent.exe"
       ],
       [
@@ -24,6 +25,6 @@
   },
   "serial": {
     "baud": 115200,
-    "port": "COM4"
+    "port": "COM5"
   }
 }

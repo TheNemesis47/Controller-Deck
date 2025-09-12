@@ -44,6 +44,9 @@ public:
         std::function<bool(nlohmann::json&, int /*timeoutMs*/)> popNextStateEvent; // SSE
 
         std::function<void()> requestShutdown;
+
+        std::function<bool(const std::string& /*deviceId*/, std::string& /*err*/)> selectAudioDeviceById;
+        std::function<bool(float /*volume01*/, std::string& /*err*/)> setAudioDeviceVolume;
     };
 
     ApiServer(std::string host, int port, Callbacks cbs, bool enableCORS = false);
